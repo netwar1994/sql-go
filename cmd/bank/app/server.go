@@ -40,6 +40,7 @@ func NewServer(cardSvc *card.Service, mux *http.ServeMux, ctx context.Context, c
 func (s *Server) Init() {
 	s.mux.HandleFunc("/getCards", s.getCards)
 	s.mux.HandleFunc("/getTransactions", s.getTransactions)
+	s.mux.HandleFunc("/getMostOftenBought", s.mostOftenBought)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +117,52 @@ func (s *Server) getTransactions(w http.ResponseWriter, r *http.Request) {
 		transaction := &dto.TransactionsDTO{}
 		err = rows.Scan(&transaction.Id, &transaction.CardId, &transaction.Sum, &transaction.MccId,
 			&transaction.Description, &transaction.Status, &transaction.Created)
+		if err != nil {
+			log.Println(err)
+			response(w, err)
+			return
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	response(w, transactions)
+}
+
+func (s *Server) mostOftenBought(w http.ResponseWriter, r *http.Request) {
+	extractId := r.URL.Query().Get("id")
+	if extractId == "" {
+		response(w, errors.New("user id unspecified"))
+		return
+	}
+	userId, err := strconv.ParseInt(extractId, 10, 64)
+	if err != nil {
+		response(w, errors.New("user id unspecified "))
+	}
+
+	rows, err := s.conn.Query(s.ctx,
+		`SELECT t.mcc_id, COUNT(t.mcc_id) AS cnt, m.description
+			FROM transactions t
+			JOIN mcc m ON t.mcc_id = m.id
+			JOIN cards c ON t.card_id = c.id
+			WHERE c.owner_id = $1
+			GROUP BY t.mcc_id, m.description
+			ORDER BY cnt DESC
+			LIMIT 1`, userId,
+	)
+	if err != nil {
+		if err != pgx.ErrNoRows {
+			log.Println(userId)
+			log.Println(NewDbError(err))
+			response(w, NewDbError(err))
+			return
+		}
+	}
+	defer rows.Close()
+
+	var transactions []*dto.MostOftenBoughtDTO
+	for rows.Next() {
+		transaction := &dto.MostOftenBoughtDTO{}
+		err = rows.Scan(&transaction.MCCId, &transaction.Count, &transaction.Description)
 		if err != nil {
 			log.Println(err)
 			response(w, err)

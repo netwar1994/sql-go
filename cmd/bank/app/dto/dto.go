@@ -20,3 +20,14 @@ type TransactionsDTO struct {
 	Status	string `json:"status"`
 	Created	time.Time	`json:"created"`
 }
+
+type MostOftenBoughtDTO struct {
+	MCCId		int64 `json:"mcc_id"`
+	Count       int64  `json:"count"`
+	Description string `json:"description"`
+}
+
+type MostSpentDTO struct {
+	Amount      int64  `json:"amount"`
+	Description string `json:"description"`
+}

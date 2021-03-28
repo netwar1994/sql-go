@@ -23,5 +23,7 @@ VALUES ('5411', 'Grocery Stores, Supermarkets'),
 INSERT INTO transactions (card_id, sum, mcc_id, description, icon_id, status)
 VALUES (3, 350, 1, 'Food', 1, 'DONE'),
        (1, 240, 2, 'Lunch', 2, 'DONE'),
-       (2, 350, 3, 'Printing', 3, 'DONE'),
+       (4, 850, 3, 'Printing', 3, 'DONE'),
+       (4, 850, 3, 'Printing', 3, 'DONE'),
+       (4, 850, 3, 'Printing', 3, 'DONE'),
        (3, 350, 1, 'Food', 3, 'PENDING');
