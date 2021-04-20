@@ -28,6 +28,6 @@ type MostOftenBoughtDTO struct {
 }
 
 type MostSpentDTO struct {
-	Amount      int64  `json:"amount"`
+	Sum      int64  `json:"sum"`
 	Description string `json:"description"`
 }

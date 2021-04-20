@@ -41,6 +41,7 @@ func (s *Server) Init() {
 	s.mux.HandleFunc("/getCards", s.getCards)
 	s.mux.HandleFunc("/getTransactions", s.getTransactions)
 	s.mux.HandleFunc("/getMostOftenBought", s.mostOftenBought)
+	s.mux.HandleFunc("/getMostSpent", s.getMostSpent)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -163,6 +164,52 @@ func (s *Server) mostOftenBought(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		transaction := &dto.MostOftenBoughtDTO{}
 		err = rows.Scan(&transaction.MCCId, &transaction.Count, &transaction.Description)
+		if err != nil {
+			log.Println(err)
+			response(w, err)
+			return
+		}
+		transactions = append(transactions, transaction)
+	}
+
+	response(w, transactions)
+}
+
+func (s *Server) getMostSpent(w http.ResponseWriter, r *http.Request) {
+	extractId := r.URL.Query().Get("id")
+	if extractId == "" {
+		response(w, errors.New("user id unspecified"))
+		return
+	}
+	userId, err := strconv.ParseInt(extractId, 10, 64)
+	if err != nil {
+		response(w, errors.New("user id unspecified "))
+	}
+
+	rows, err := s.conn.Query(s.ctx,
+		`SELECT SUM(t.sum) as sum_transaction, m.description
+			FROM transactions t
+			JOIN mcc m ON t.mcc_id = m.id
+			JOIN cards c ON t.card_id = c.id
+			WHERE c.owner_id = $1
+			GROUP BY m.description
+			ORDER BY sum_transaction DESC
+			LIMIT 1`, userId,
+	)
+	if err != nil {
+		if err != pgx.ErrNoRows {
+			log.Println(userId)
+			log.Println(NewDbError(err))
+			response(w, NewDbError(err))
+			return
+		}
+	}
+	defer rows.Close()
+
+	var transactions []*dto.MostSpentDTO
+	for rows.Next() {
+		transaction := &dto.MostSpentDTO{}
+		err = rows.Scan(&transaction.Sum, &transaction.Description)
 		if err != nil {
 			log.Println(err)
 			response(w, err)
